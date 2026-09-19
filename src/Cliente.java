@@ -3,17 +3,20 @@ import java.net.*;
 import java.util.Scanner;
 
 /**
- * Classe Cliente do sistema SiCA.
- * Conecta-se ao servidor via Socket TCP e disponibiliza um menu interativo ao usuário
- * para solicitar listagem, envio (upload) e download de arquivos.
+ * Cliente do SiCA. Permite listar, enviar e baixar arquivos
+ * por meio de uma conexão TCP com o servidor.
  */
 public class Cliente {
+
     private static final String IP_SERVIDOR = "127.0.0.1";
     private static final int PORTA_SERVIDOR = 12345;
     private static final String DIRETORIO_CLIENTE = "./cliente_arquivos";
 
+    /**
+     * Inicia o cliente, cria a pasta local caso necessário
+     * e exibe o menu de opções para o usuário.
+     */
     public static void main(String[] args) {
-        // Garante que a pasta local do cliente exista
         File pasta = new File(DIRETORIO_CLIENTE);
         if (!pasta.exists()) {
             pasta.mkdirs();
@@ -31,7 +34,7 @@ public class Cliente {
             System.out.print("Escolha uma opção: ");
 
             int opcao = scanner.nextInt();
-            scanner.nextLine(); // Limpa o buffer de entrada
+            scanner.nextLine();
 
             if (opcao == 0) {
                 System.out.println("Encerrando aplicação...");
@@ -52,11 +55,13 @@ public class Cliente {
                     System.out.println("Opção inválida!");
             }
         }
+
         scanner.close();
     }
 
     /**
-     * Solicita e exibe a lista de arquivos armazenados no servidor.
+     * Solicita ao servidor a lista de arquivos disponíveis
+     * e exibe os nomes recebidos no terminal.
      */
     private static void solicitarListagem() {
         try (
@@ -64,13 +69,15 @@ public class Cliente {
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
             DataInputStream in = new DataInputStream(socket.getInputStream())
         ) {
-            out.writeUTF("LIST"); // Envia comando LIST
+            out.writeUTF("LIST");
 
             int quantidade = in.readInt();
+
             if (quantidade == 0) {
                 System.out.println("Nenhum arquivo disponível no servidor.");
             } else {
                 System.out.println("\n--- Arquivos no Servidor (" + quantidade + ") ---");
+
                 for (int i = 0; i < quantidade; i++) {
                     System.out.println("- " + in.readUTF());
                 }
@@ -81,13 +88,14 @@ public class Cliente {
     }
 
     /**
-     * Envia um arquivo presente na pasta do cliente para o servidor.
+     * Envia um arquivo da pasta local do cliente para o servidor.
      */
     private static void realizarUpload(Scanner scanner) {
         System.out.print("Digite o nome do arquivo presente em '" + DIRETORIO_CLIENTE + "': ");
         String nomeArquivo = scanner.nextLine();
 
         File arquivo = new File(DIRETORIO_CLIENTE, nomeArquivo);
+
         if (!arquivo.exists()) {
             System.out.println("ERRO: O arquivo '" + nomeArquivo + "' não foi encontrado na pasta local do cliente.");
             return;
@@ -98,12 +106,11 @@ public class Cliente {
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
             DataInputStream in = new DataInputStream(socket.getInputStream())
         ) {
-            // 1. Envia comando UPLOAD, nome e tamanho do arquivo
             out.writeUTF("UPLOAD");
             out.writeUTF(arquivo.getName());
             out.writeLong(arquivo.length());
 
-            // 2. Transfere os bytes do arquivo para o servidor
+            // Envia o conteúdo do arquivo em blocos de bytes.
             try (FileInputStream fis = new FileInputStream(arquivo)) {
                 byte[] buffer = new byte[4096];
                 int bytesLidos;
@@ -113,7 +120,6 @@ public class Cliente {
                 }
             }
 
-            // 3. Recebe a resposta do servidor
             String resposta = in.readUTF();
             System.out.println("Servidor: " + resposta);
 
@@ -123,7 +129,8 @@ public class Cliente {
     }
 
     /**
-     * Solicita e realiza o download de um arquivo disponível no servidor.
+     * Solicita um arquivo ao servidor e salva o conteúdo recebido
+     * na pasta local do cliente.
      */
     private static void realizarDownload(Scanner scanner) {
         System.out.print("Digite o nome do arquivo que deseja baixar do servidor: ");
@@ -134,28 +141,30 @@ public class Cliente {
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
             DataInputStream in = new DataInputStream(socket.getInputStream())
         ) {
-            // 1. Envia comando DOWNLOAD e nome do arquivo desejado
             out.writeUTF("DOWNLOAD");
             out.writeUTF(nomeArquivo);
 
-            // 2. Verifica se o servidor possui o arquivo
             boolean existe = in.readBoolean();
             if (!existe) {
                 System.out.println("ERRO: O arquivo informado não foi encontrado no servidor.");
                 return;
             }
 
-            // 3. Lê o tamanho do arquivo e grava os bytes na pasta local
             long tamanhoArquivo = in.readLong();
             File arquivoDestino = new File(DIRETORIO_CLIENTE, nomeArquivo);
 
+            // Recebe o arquivo em blocos até completar o tamanho informado.
             try (FileOutputStream fos = new FileOutputStream(arquivoDestino)) {
                 byte[] buffer = new byte[4096];
                 long totalLido = 0;
                 int bytesLidos;
 
-                while (totalLido < tamanhoArquivo && 
-                       (bytesLidos = in.read(buffer, 0, (int) Math.min(buffer.length, tamanhoArquivo - totalLido))) != -1) {
+                while (totalLido < tamanhoArquivo &&
+                       (bytesLidos = in.read(
+                           buffer,
+                           0,
+                           (int) Math.min(buffer.length, tamanhoArquivo - totalLido)
+                       )) != -1) {
                     fos.write(buffer, 0, bytesLidos);
                     totalLido += bytesLidos;
                 }
