@@ -36,48 +36,19 @@ O projeto foi desenvolvido com foco no aprendizado de conceitos de redes, socket
 
 O SiCA utiliza uma arquitetura cliente-servidor.
 
-O servidor fica aguardando conexões na porta `12345`, enquanto o cliente se conecta ao endereço configurado no código.
+O servidor permanece aguardando conexões na porta `12345`, enquanto o cliente se conecta ao endereço `127.0.0.1`, que representa a própria máquina.
 
-Atualmente, o cliente utiliza:
+A comunicação entre cliente e servidor acontece por meio de comandos simples:
 
-```text id="4c8jz7"
-127.0.0.1:12345
-```
+- `LIST`: o cliente solicita a lista de arquivos disponíveis no servidor.
+- `UPLOAD`: o cliente envia um arquivo para o servidor.
+- `DOWNLOAD`: o cliente solicita o download de um arquivo armazenado no servidor.
 
-Ou seja, cliente e servidor são executados, por padrão, na mesma máquina.
+No comando `LIST`, o servidor envia primeiro a quantidade de arquivos encontrados e depois o nome de cada arquivo.
 
-```mermaid id="rafjai"
-sequenceDiagram
-    autonumber
+No `UPLOAD`, o cliente envia o nome do arquivo, o tamanho e os dados do arquivo em bytes.
 
-    actor Cliente
-    participant Servidor
-
-    Note over Cliente,Servidor: Conexão TCP na porta 12345
-
-    alt LIST
-        Cliente->>Servidor: "LIST"
-        Servidor-->>Cliente: Quantidade de arquivos
-        Servidor-->>Cliente: Nome de cada arquivo
-
-    else UPLOAD
-        Cliente->>Servidor: "UPLOAD"
-        Cliente->>Servidor: Nome do arquivo
-        Cliente->>Servidor: Tamanho do arquivo
-        Cliente->>Servidor: Bytes do arquivo
-        Servidor-->>Cliente: Confirmação
-
-    else DOWNLOAD
-        Cliente->>Servidor: "DOWNLOAD"
-        Cliente->>Servidor: Nome do arquivo
-        Servidor-->>Cliente: Arquivo existe?
-        Servidor-->>Cliente: Tamanho do arquivo
-        Servidor-->>Cliente: Bytes do arquivo
-    end
-```
-
----
-
+No `DOWNLOAD`, o servidor verifica se o arquivo existe e, caso exista, envia o tamanho e os dados do arquivo para o cliente.
 ## 📁 Estrutura do projeto
 
 ```text id="c6zyry"
